@@ -8,7 +8,7 @@ import { Bell, BellOff } from 'lucide-react';
 import axiosInstance from '@/lib/axiosInstance';
 
 interface NotificationPermissionProps {
-  userEmail: string;
+  userEmail?: string; // Made optional
 }
 
 const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEmail }) => {
@@ -22,11 +22,12 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
       setPermission(Notification.permission);
     }
 
-    // Test the notifications route first
-    testNotificationsRoute().then(() => {
-      // Fetch user's notification preference
-      fetchNotificationStatus();
-    });
+    // Only fetch notification status if userEmail is provided
+    if (userEmail) {
+      testNotificationsRoute().then(() => {
+        fetchNotificationStatus();
+      });
+    }
   }, [userEmail]);
 
   const testNotificationsRoute = async () => {
@@ -40,12 +41,12 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
   };
 
   const fetchNotificationStatus = async () => {
+    if (!userEmail) return;
+    
     try {
       const encodedEmail = encodeURIComponent(userEmail);
       const url = `/notifications/status/${encodedEmail}`;
       console.log('Fetching notification status from:', url);
-      console.log('Base URL:', axiosInstance.defaults.baseURL);
-      console.log('Full URL:', `${axiosInstance.defaults.baseURL}${url}`);
       
       const response = await axiosInstance.get(url);
       setNotificationEnabled(response.data.notificationEnabled);
@@ -88,6 +89,11 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
   };
 
   const toggleNotifications = async () => {
+    if (!userEmail) {
+      alert('Please sign in to manage notification settings');
+      return;
+    }
+
     setLoading(true);
     try {
       const encodedEmail = encodeURIComponent(userEmail);
@@ -119,6 +125,28 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
       });
     }
   };
+
+  // Show different UI when no user is logged in
+  if (!userEmail) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center">
+          <p className="text-sm text-gray-600 mb-4">
+            Please sign in to manage your notification settings
+          </p>
+          <Button onClick={() => window.location.href = '/login'}>
+            Sign In
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">
