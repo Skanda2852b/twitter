@@ -53,7 +53,10 @@ export default function RightSidebar() {
           <p className="text-gray-400 text-sm mb-4">
             Subscribe to unlock new features and if eligible, receive a share of revenue.
           </p>
-          <Button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full">
+          <Button 
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full"
+            onClick={() => window.location.href = '/subscriptions'}
+          >
             Subscribe
           </Button>
         </CardContent>

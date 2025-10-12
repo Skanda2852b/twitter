@@ -5,6 +5,11 @@ import LoadingSpinner from "../loading-spinner";
 import Sidebar from "./Sidebar";
 import RightSidebar from "./Rightsidebar";
 import ProfilePage from "../ProfilePage";
+import Explore from "../Explore";
+import Notifications from "../Notifications";
+import Messages from "../Messages";
+import Bookmarks from "../Bookmarks";
+import TweetComposer from "../TweetComposer";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -32,7 +37,13 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       </div>
       <main className="flex-1 max-w-2xl border-x border-gray-800">
-        {currentPage ==="profile" ? <ProfilePage/> :children}
+        {currentPage === "profile" ? <ProfilePage /> :
+         currentPage === "explore" ? <Explore /> :
+         currentPage === "notifications" ? <Notifications /> :
+         currentPage === "messages" ? <Messages /> :
+         currentPage === "bookmarks" ? <Bookmarks /> :
+         currentPage === "compose" ? <TweetComposer /> :
+         children}
       </main>
       <div className="hidden lg:block w-80 p-4">
         <RightSidebar />

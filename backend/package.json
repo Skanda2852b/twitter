@@ -17,6 +17,10 @@
     "express": "^5.1.0",
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.0",
-    "nodemon": "^3.1.10"
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.6",
+    "nodemon": "^3.1.10",
+    "stripe": "^18.5.0",
+    "ua-parser-js": "^2.0.5"
   }
 }

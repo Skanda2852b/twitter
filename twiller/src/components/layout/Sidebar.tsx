@@ -11,7 +11,13 @@ import {
   User,
   MoreHorizontal,
   Settings,
-  LogOut
+  LogOut,
+  CreditCard,
+  Globe,
+  Mic,
+  History,
+  Key,
+  Shield
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -74,7 +80,10 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
         </ul>
         
         <div className="mt-8 px-2">
-          <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-full text-lg">
+          <Button 
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-full text-lg"
+            onClick={() => onNavigate?.('compose')}
+          >
             Post
           </Button>
         </div>
@@ -100,6 +109,27 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 bg-black border-gray-800">
+              <DropdownMenuItem className="text-white hover:bg-gray-900" onClick={() => window.location.href = '/notifications'}>
+                <Bell className="mr-2 h-4 w-4" />
+                Notifications
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-white hover:bg-gray-900" onClick={() => window.location.href = '/subscriptions'}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Subscriptions
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-white hover:bg-gray-900" onClick={() => window.location.href = '/language'}>
+                <Globe className="mr-2 h-4 w-4" />
+                Language
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-white hover:bg-gray-900" onClick={() => window.location.href = '/login-history'}>
+                <History className="mr-2 h-4 w-4" />
+                Login History
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-white hover:bg-gray-900" onClick={() => window.location.href = '/forgot-password'}>
+                <Key className="mr-2 h-4 w-4" />
+                Forgot Password
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-gray-800" />
               <DropdownMenuItem className="text-white hover:bg-gray-900">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
