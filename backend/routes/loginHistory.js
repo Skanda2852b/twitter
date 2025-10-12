@@ -1,5 +1,5 @@
 import express from "express";
-import LoginHistory from "../models/loginHistory.js";
+import LoginHistory from "../models/LoginHistory.js";
 import User from "../models/user.js";
 
 const router = express.Router();

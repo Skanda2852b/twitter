@@ -1,5 +1,5 @@
 // backend/middleware/loginTracker.js
-import LoginHistory from "../models/loginHistory.js";
+import LoginHistory from "../models/LoginHistory.js";
 import UAParser from "ua-parser-js";
 
 export const trackLogin = async (req, res, next) => {
