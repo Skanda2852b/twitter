@@ -21,7 +21,7 @@ import {
   Share,
   MoreHorizontal,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import axiosInstance from "@/lib/axiosInstance";
 
 export default function TweetCard({
@@ -29,15 +29,19 @@ export default function TweetCard({
 }) {
   const { user } = useAuth();
   const [
-    tweetstate,
+    tweetState,
     setTweetState,
   ] = useState(tweet);
+  const [
+    notificationCooldown,
+    setNotificationCooldown,
+  ] = useState(new Set());
 
   // Safe data access functions
   const getAuthorName =
     () => {
       return (
-        tweetstate?.author
+        tweetState?.author
           ?.displayName ||
         "Unknown User"
       );
@@ -46,7 +50,7 @@ export default function TweetCard({
   const getAuthorUsername =
     () => {
       return (
-        tweetstate?.author
+        tweetState?.author
           ?.username ||
         "unknown"
       );
@@ -55,7 +59,7 @@ export default function TweetCard({
   const getAuthorAvatar =
     () => {
       return (
-        tweetstate?.author
+        tweetState?.author
           ?.avatar ||
         "/default-avatar.png"
       );
@@ -72,7 +76,7 @@ export default function TweetCard({
 
   const isVerified = () => {
     return (
-      tweetstate?.author
+      tweetState?.author
         ?.verified || false
     );
   };
@@ -90,99 +94,145 @@ export default function TweetCard({
         );
       setTweetState(res.data);
     } catch (error) {
-      console.log(error);
+      console.log(
+        "Like error:",
+        error
+      );
     }
   };
 
-  // Fixed notification effect with proper error handling
+  // Improved notification effect with better error handling
   useEffect(() => {
     let isMounted = true;
 
     const checkForNotifications =
       async () => {
+        // Early returns for invalid conditions
         if (
           !isMounted ||
-          !tweetstate?.content ||
-          !tweetstate?._id ||
-          !user?.notificationEnabled
-        )
+          !tweetState?.content ||
+          !tweetState?._id ||
+          !user?.email
+        ) {
           return;
+        }
+
+        // Check if we've already shown notification for this tweet
+        if (
+          notificationCooldown.has(
+            tweetState._id
+          )
+        ) {
+          return;
+        }
 
         const hasKeyword =
-          tweetstate.content
+          tweetState.content
             .toLowerCase()
             .includes(
               "cricket"
             ) ||
-          tweetstate.content
+          tweetState.content
             .toLowerCase()
             .includes(
               "science"
             );
 
-        if (hasKeyword) {
-          try {
-            // Only make API call if we have permission and valid tweet ID
-            if (
-              Notification.permission ===
-                "granted" &&
-              tweetstate._id &&
-              typeof tweetstate._id ===
-                "string"
-            ) {
-              await axiosInstance.post(
-                "/notifications/check-keywords",
-                {
-                  tweetId:
-                    tweetstate._id,
-                }
-              );
-            }
+        if (!hasKeyword) {
+          return;
+        }
 
-            // Show browser notification only if permission is granted
-            if (
-              Notification.permission ===
-              "granted"
-            ) {
-              const notification =
-                new Notification(
-                  "🔔 Keyword Alert!",
-                  {
-                    body: `Tweet about ${
-                      tweetstate.content
-                        .toLowerCase()
-                        .includes(
-                          "cricket"
-                        )
-                        ? "cricket"
-                        : "science"
-                    }: ${tweetstate.content.substring(
-                      0,
-                      100
-                    )}...`,
-                    icon: getAuthorAvatar(),
-                    tag: "keyword-notification",
-                  }
-                );
-
-              // Handle notification click
-              notification.onclick =
-                () => {
-                  window.focus();
-                  notification.close();
-                };
-            }
-          } catch (error) {
-            console.error(
-              "Notification error:",
-              error
-            );
-            // Don't show browser notification if API call fails
+        try {
+          // Check browser notification permission first
+          if (
+            Notification.permission !==
+            "granted"
+          ) {
+            return;
           }
+
+          // Prepare notification data
+          const notificationData =
+            {
+              tweetId:
+                tweetState._id,
+              tweetContent:
+                tweetState.content,
+              userEmail:
+                user.email,
+              keywords:
+                tweetState.content
+                  .toLowerCase()
+                  .includes(
+                    "cricket"
+                  )
+                  ? [
+                      "cricket",
+                    ]
+                  : [
+                      "science",
+                    ],
+            };
+
+          // Make API call to record notification (but don't block on errors)
+          try {
+            await axiosInstance.post(
+              "/notifications/check-keywords",
+              notificationData
+            );
+          } catch (apiError) {
+            console.warn(
+              "Notification API error (non-critical):",
+              apiError.message
+            );
+            // Continue to show browser notification even if API fails
+          }
+
+          // Show browser notification
+          const notification =
+            new Notification(
+              "🔔 Keyword Alert!",
+              {
+                body: `Tweet about ${
+                  tweetState.content
+                    .toLowerCase()
+                    .includes(
+                      "cricket"
+                    )
+                    ? "cricket"
+                    : "science"
+                }: ${tweetState.content.substring(
+                  0,
+                  100
+                )}...`,
+                icon: getAuthorAvatar(),
+                tag: `keyword-${tweetState._id}`,
+              }
+            );
+
+          // Handle notification click
+          notification.onclick =
+            () => {
+              window.focus();
+              notification.close();
+            };
+
+          // Add to cooldown to prevent duplicate notifications
+          setNotificationCooldown(
+            (prev) =>
+              new Set([
+                ...prev,
+                tweetState._id,
+              ])
+          );
+        } catch (error) {
+          console.error(
+            "Notification error:",
+            error
+          );
         }
       };
 
-    // Request notification permission only if not already decided
     const requestNotificationPermission =
       async () => {
         if (
@@ -200,15 +250,19 @@ export default function TweetCard({
         }
       };
 
-    // Only run notification checks if component is mounted
+    // Initialize notifications
     if (isMounted) {
       requestNotificationPermission().then(
         () => {
+          // Only check for notifications if permission is granted
           if (
             Notification.permission ===
             "granted"
           ) {
-            checkForNotifications();
+            // Small delay to ensure component is fully mounted
+            setTimeout(() => {
+              checkForNotifications();
+            }, 1000);
           }
         }
       );
@@ -218,7 +272,11 @@ export default function TweetCard({
     return () => {
       isMounted = false;
     };
-  }, [tweetstate, user]);
+  }, [
+    tweetState,
+    user,
+    notificationCooldown,
+  ]);
 
   const retweetTweet = async (
     tweetId
@@ -233,7 +291,10 @@ export default function TweetCard({
         );
       setTweetState(res.data);
     } catch (error) {
-      console.log(error);
+      console.log(
+        "Retweet error:",
+        error
+      );
     }
   };
 
@@ -260,18 +321,18 @@ export default function TweetCard({
   };
 
   const isLiked =
-    tweetstate?.likedBy?.includes(
+    tweetState?.likedBy?.includes(
       user?._id || ""
     );
   const isRetweet =
-    tweetstate?.retweetedBy?.includes(
+    tweetState?.retweetedBy?.includes(
       user?._id || ""
     );
 
   // If tweet data is invalid, don't render
   if (
-    !tweetstate ||
-    !tweetstate._id
+    !tweetState ||
+    !tweetState._id
   ) {
     return (
       <Card className="bg-black border-gray-800 border-x-0 border-t-0 rounded-none">
@@ -321,9 +382,9 @@ export default function TweetCard({
                 ·
               </span>
               <span className="text-gray-500">
-                {tweetstate.timestamp &&
+                {tweetState.timestamp &&
                   new Date(
-                    tweetstate.timestamp
+                    tweetState.timestamp
                   ).toLocaleDateString(
                     "en-us",
                     {
@@ -346,15 +407,15 @@ export default function TweetCard({
             </div>
 
             <div className="text-white mb-3 leading-relaxed">
-              {tweetstate.content ||
+              {tweetState.content ||
                 "No content"}
             </div>
 
-            {tweetstate.image && (
+            {tweetState.image && (
               <div className="mb-3 rounded-2xl overflow-hidden">
                 <img
                   src={
-                    tweetstate.image
+                    tweetState.image
                   }
                   alt="Tweet image"
                   className="w-full h-auto max-h-96 object-cover"
@@ -362,7 +423,7 @@ export default function TweetCard({
               </div>
             )}
 
-            {tweetstate.audio && (
+            {tweetState.audio && (
               <div className="mb-3 p-4 bg-gray-900 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -376,12 +437,12 @@ export default function TweetCard({
                       Tweet
                     </div>
                     <div className="text-gray-400 text-xs">
-                      {tweetstate.audioDuration
+                      {tweetState.audioDuration
                         ? `${Math.floor(
-                            tweetstate.audioDuration /
+                            tweetState.audioDuration /
                               60
                           )}:${(
-                            tweetstate.audioDuration %
+                            tweetState.audioDuration %
                             60
                           )
                             .toString()
@@ -412,7 +473,7 @@ export default function TweetCard({
                 <MessageCircle className="h-5 w-5 group-hover:text-blue-400" />
                 <span className="text-sm">
                   {formatNumber(
-                    tweetstate.comments
+                    tweetState.comments
                   )}
                 </span>
               </Button>
@@ -430,7 +491,7 @@ export default function TweetCard({
                 ) => {
                   e.stopPropagation();
                   retweetTweet(
-                    tweetstate._id
+                    tweetState._id
                   );
                 }}
               >
@@ -443,7 +504,7 @@ export default function TweetCard({
                 />
                 <span className="text-sm">
                   {formatNumber(
-                    tweetstate.retweets
+                    tweetState.retweets
                   )}
                 </span>
               </Button>
@@ -461,7 +522,7 @@ export default function TweetCard({
                 ) => {
                   e.stopPropagation();
                   likeTweet(
-                    tweetstate._id
+                    tweetState._id
                   );
                 }}
               >
@@ -474,7 +535,7 @@ export default function TweetCard({
                 />
                 <span className="text-sm">
                   {formatNumber(
-                    tweetstate.likes
+                    tweetState.likes
                   )}
                 </span>
               </Button>

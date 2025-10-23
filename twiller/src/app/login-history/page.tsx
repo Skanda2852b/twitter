@@ -1,5 +1,11 @@
-import LoginHistory from '@/components/LoginHistory';
+// app/login-history/page.tsx
+import SafeClientPage from '@/components/SafeClientPage';
+import ClientLoginHistory from '@/components/ClientLoginHistory';
 
 export default function LoginHistoryPage() {
-  return <LoginHistory />;
+  return (
+    <SafeClientPage>
+      <ClientLoginHistory />
+    </SafeClientPage>
+  );
 }

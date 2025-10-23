@@ -1,3 +1,4 @@
+// components/NotificationPermission.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -8,15 +9,18 @@ import { Bell, BellOff } from 'lucide-react';
 import axiosInstance from '@/lib/axiosInstance';
 
 interface NotificationPermissionProps {
-  userEmail?: string; // Made optional
+  userEmail?: string;
 }
 
 const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEmail }) => {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+    
     // Check browser notification permission
     if ('Notification' in window) {
       setPermission(Notification.permission);
@@ -24,21 +28,9 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
 
     // Only fetch notification status if userEmail is provided
     if (userEmail) {
-      testNotificationsRoute().then(() => {
-        fetchNotificationStatus();
-      });
+      fetchNotificationStatus();
     }
   }, [userEmail]);
-
-  const testNotificationsRoute = async () => {
-    try {
-      console.log('Testing notifications route...');
-      const response = await axiosInstance.get('/notifications/test');
-      console.log('Notifications route test successful:', response.data);
-    } catch (error) {
-      console.error('Notifications route test failed:', error);
-    }
-  };
 
   const fetchNotificationStatus = async () => {
     if (!userEmail) return;
@@ -46,21 +38,17 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
     try {
       const encodedEmail = encodeURIComponent(userEmail);
       const url = `/notifications/status/${encodedEmail}`;
-      console.log('Fetching notification status from:', url);
       
       const response = await axiosInstance.get(url);
       setNotificationEnabled(response.data.notificationEnabled);
     } catch (error: any) {
       console.error('Error fetching notification status:', error);
-      console.error('Error details:', error.response?.data);
-      console.error('Status:', error.response?.status);
       
       // Fallback: Check localStorage for user preference
       const savedPreference = localStorage.getItem(`notification_${userEmail}`);
       if (savedPreference !== null) {
         setNotificationEnabled(JSON.parse(savedPreference));
       } else {
-        // Set default value if user not found
         setNotificationEnabled(true);
       }
     }
@@ -77,7 +65,6 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
       setPermission(permission);
       
       if (permission === 'granted') {
-        // Show a test notification
         new Notification('Twiller Notifications', {
           body: 'You will now receive notifications for cricket and science tweets!',
           icon: '/favicon.ico'
@@ -103,12 +90,10 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
       
       if (response.data.success) {
         setNotificationEnabled(!notificationEnabled);
-        // Save to localStorage as backup
         localStorage.setItem(`notification_${userEmail}`, JSON.stringify(!notificationEnabled));
       }
     } catch (error) {
       console.error('Error toggling notifications:', error);
-      // Fallback: Use localStorage
       const newValue = !notificationEnabled;
       setNotificationEnabled(newValue);
       localStorage.setItem(`notification_${userEmail}`, JSON.stringify(newValue));
@@ -126,7 +111,20 @@ const NotificationPermission: React.FC<NotificationPermissionProps> = ({ userEma
     }
   };
 
-  // Show different UI when no user is logged in
+  // Don't render anything during SSR
+  if (!isClient) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardContent className="p-6">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!userEmail) {
     return (
       <Card className="w-full max-w-md mx-auto">
